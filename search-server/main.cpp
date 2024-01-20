@@ -88,8 +88,8 @@ private:
     };
     
     struct QueryWord {
-        bool isMinusWord;
-        bool isStopWord;
+        bool is_minus_word;
+        bool is_stop_word;
         string word;
     };
 
@@ -112,12 +112,12 @@ private:
     }
     
     QueryWord ParseQueryWord(string word) const {
-        bool isMinusWord = false;
+        bool is_minus_word = false;
         if (word[0] == '-') {
-            isMinusWord = true;
+            is_minus_word = true;
             word = word.substr(1);
         }
-        return {isMinusWord, IsStopWord(word), word};
+        return {is_minus_word, IsStopWord(word), word};
     }
 
     Query ParseQuery(const string& text) const {
@@ -125,8 +125,8 @@ private:
         for (const string& word : SplitIntoWords(text)) {
             const QueryWord query_word = ParseQueryWord(word);
             
-            if (!query_word.isStopWord) {
-                if (!query_word.isMinusWord) {
+            if (!query_word.is_stop_word) {
+                if (!query_word.is_minus_word) {
                     query_words.plus_words.insert(query_word.word);
                 } else {
                     query_words.minus_words.insert(query_word.word);
@@ -143,8 +143,9 @@ private:
         
         for (const string& word : query_words.plus_words) {
             if (documents_.count(word) > 0) {
+                double word_idf = log(static_cast<double>(document_count_) / documents_.at(word).size());
                 for (const auto& [id, tf] : documents_.at(word)) {
-                    find_documents[id] += log(static_cast<double>(document_count_) / documents_.at(word).size()) * tf;
+                    find_documents[id] += word_idf * tf;
                 }
             }
         }
