@@ -2,6 +2,8 @@
 #include <cmath>
 #include <iostream>
 #include <map>
+#include <numeric>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -79,10 +81,6 @@ enum class DocumentStatus {
 
 class SearchServer {
 public:
-    // Defines an invalid document id
-    // You can refer to this constant as SearchServer::INVALID_DOCUMENT_ID
-    inline static constexpr int INVALID_DOCUMENT_ID = -1;
-    
     template <typename StringContainer>
     explicit SearchServer(const StringContainer& stop_words)
         : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
@@ -95,27 +93,27 @@ public:
 
     explicit SearchServer(const string& stop_words_text)
         : SearchServer(
-            SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
-    {
-        if (!IsValidWord(stop_words_text)) {
-            throw invalid_argument("Error in stop words."s);
-        }
+            SplitIntoWords(stop_words_text)) { // Invoke delegating constructor from string container
     }
 
     void AddDocument(int document_id, const string& document, DocumentStatus status,
                                    const vector<int>& ratings) {
-        if(document_id < 0 || documents_.count(document_id) == 1) {
+        if(document_id < 0) {
+            throw invalid_argument("ID is negative number."s);
+        }
+
+        if(documents_.count(document_id) == 1) {
             throw invalid_argument("Cannot add document."s);
         }
 
-        try {
-            vector<string> words = SplitIntoWordsNoStop(document);
-            const double inv_word_count = 1.0 / words.size();
-            for (const string& word : words) {
+        if (auto words = SplitIntoWordsNoStop(document); words.has_value()) {
+            const double inv_word_count = 1.0 / words->size();
+            for (const string& word : *words) {
                 word_to_document_freqs_[word][document_id] += inv_word_count;
             }
             documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
-        } catch (const invalid_argument& e) {
+            documents_id_.push_back(document_id);
+        } else {
             throw invalid_argument("Cannot add document."s);
         }
     }
@@ -168,8 +166,7 @@ public:
     
     int GetDocumentId(int index) const {
         if(index >= 0 && index < GetDocumentCount()) {
-            auto find = next(documents_.begin(), index);
-            return find->first;
+            return documents_id_[index];
         } else {
             throw out_of_range("Invalid index."s);
         }
@@ -210,6 +207,7 @@ private:
     const set<string> stop_words_;
     map<string, map<int, double>> word_to_document_freqs_;
     map<int, DocumentData> documents_;
+    vector<int> documents_id_;
 
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
@@ -222,11 +220,11 @@ private:
         });
     }
 
-    vector<string> SplitIntoWordsNoStop(const string& text) const {
+    optional<vector<string>> SplitIntoWordsNoStop(const string& text) const {
         vector<string> result;
         for (const string& word : SplitIntoWords(text)) {
             if(!IsValidWord(word)) {
-                throw invalid_argument("Error in text."s);
+                return nullopt;
             }
             if (!IsStopWord(word)) {
                 result.push_back(word);
@@ -239,11 +237,7 @@ private:
         if (ratings.empty()) {
             return 0;
         }
-        int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
-        return rating_sum / static_cast<int>(ratings.size());
+        return accumulate(ratings.begin(), ratings.end(), 0) / static_cast<int>(ratings.size());
     }
 
     struct QueryWord {
