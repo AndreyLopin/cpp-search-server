@@ -120,10 +120,9 @@ public:
 
     template <typename DocumentPredicate>
     vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
-        try {
-            Query query = ParseQuery(raw_query);
-
-            auto result = FindAllDocuments(query, document_predicate);
+        Query query;
+        if(ParseQuery(raw_query, query)) {
+            vector<Document> result = FindAllDocuments(query, document_predicate);
 
             sort(result.begin(), result.end(),
                 [](const Document& lhs, const Document& rhs) {
@@ -137,7 +136,7 @@ public:
                 result.resize(MAX_RESULT_DOCUMENT_COUNT);
             }
             return result;
-        } catch (const invalid_argument& e) {
+        } else {
             throw invalid_argument("Error in query."s);
         }
     }
@@ -173,8 +172,8 @@ public:
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {        
-        try {            
-            Query query = ParseQuery(raw_query);
+        Query query;
+        if(ParseQuery(raw_query, query)) {
             vector<string> matched_words;
             for (const string& word : query.plus_words) {
                 if (word_to_document_freqs_.count(word) == 0) {
@@ -194,7 +193,7 @@ public:
                 }
             }
             return make_tuple(matched_words, documents_.at(document_id).status);
-        } catch (const invalid_argument& e) {
+        } else {
             throw invalid_argument("Error in query."s);
         }
     }
@@ -246,17 +245,18 @@ private:
         bool is_stop;
     };
 
-    QueryWord ParseQueryWord(string text) const {
+    [[nodiscard]] bool ParseQueryWord(string text, QueryWord& result) const {
         bool is_minus = false;
         // Word shouldn't be empty
         if(text == "-"s || !IsValidWord(text) || (text[0] == '-' && text[1] == '-')) {
-            throw invalid_argument("Error in query."s);
+            return false;
         }
         if(text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
         }
-        return {text, is_minus, IsStopWord(text)};
+        result = {text, is_minus, IsStopWord(text)};
+        return true;
     }
 
     struct Query {
@@ -264,24 +264,21 @@ private:
         set<string> minus_words;
     };
 
-    Query ParseQuery(const string& text) const {
-        Query query;
+    [[nodiscard]] bool ParseQuery(const string& text, Query& query) const {
         for (const string& word : SplitIntoWords(text)) {
-            try {
-                QueryWord query_word = ParseQueryWord(word);
-
-                if (!query_word.is_stop) {
-                    if (query_word.is_minus) {
-                        query.minus_words.insert(query_word.data);
-                    } else {
-                        query.plus_words.insert(query_word.data);
-                    }
+            QueryWord query_word;
+            if(!ParseQueryWord(word, query_word)) {
+                return false;
+            }
+            if (!query_word.is_stop) {
+                if (query_word.is_minus) {
+                    query.minus_words.insert(query_word.data);
+                } else {
+                    query.plus_words.insert(query_word.data);
                 }
-            } catch(const invalid_argument& e) {
-                throw invalid_argument("Error in query."s);
             }
         }
-        return query;
+        return true;
     }
 
     // Existence required
