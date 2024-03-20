@@ -1,7 +1,7 @@
 #include "request_queue.h"
 
 template <typename DocumentPredicate>
-    std::vector<Document> RequestQueue::AddFindRequest(const string& raw_query, DocumentPredicate document_predicate) {
+    std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate) {
         ++current_time_;
         QueryResult result;
         result.matched_documents = search_server_.FindTopDocuments(raw_query, document_predicate);

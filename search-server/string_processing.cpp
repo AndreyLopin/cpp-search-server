@@ -1,4 +1,4 @@
-#include <string_processing.h"
+#include "string_processing.h"
 
 template <typename StringContainer>
 std::set<std::string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {

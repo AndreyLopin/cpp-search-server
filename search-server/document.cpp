@@ -1,4 +1,7 @@
 #include "document.h"
+#include <string>
+
+using namespace std;
 
 std::ostream& operator<<(std::ostream& out, const Document& document) {
     out << "{ document_id = "s << document.id;

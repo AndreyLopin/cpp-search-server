@@ -1,16 +1,9 @@
-#include <algorithm>
-#include <cmath>
-#include <iostream>
-#include <map>
-#include <numeric>
-#include <set>
-#include <stdexcept>
-#include <string>
-#include <utility>
-#include <vector>
+#include "search_server.h"
+#include "request_queue.h"
 
-const int MAX_RESULT_DOCUMENT_COUNT = 5;
-const double EPSILON_ = 1e-6;
+#include <string>
+
+using namespace std;
 
 template <typename Container>
 auto Paginate(const Container& c, size_t page_size) {
