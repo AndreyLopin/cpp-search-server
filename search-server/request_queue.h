@@ -9,25 +9,49 @@
 
 class RequestQueue {
 public:
-    explicit RequestQueue(const SearchServer& search_server)
-        : search_server_(search_server)
-        , no_results_requests_(0)
-        , current_time_(0) {
-    }
+    explicit RequestQueue(const SearchServer& search_server);
     // сделаем "обёртки" для всех методов поиска, чтобы сохранять результаты для нашей статистики
     template <typename DocumentPredicate>
-    std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate);
-    std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status);
-    std::vector<Document> AddFindRequest(const std::string& raw_query);
+    std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate) {
+        ++current_time_;
+        QueryResult result;
+        result.matched_documents = search_server_.FindTopDocuments(raw_query, document_predicate);
+        result.request = raw_query;
+
+        if(requests_.size() == min_in_day_) {
+            QueryResult delete_request = requests_.front();
+            if(delete_request.matched_documents.size() == 0) {
+                --no_results_requests_;
+            }
+            requests_.pop_front();
+        }
+        if(result.matched_documents.size() == 0) {
+            ++no_results_requests_;
+        }
+
+        requests_.push_back(result);
+
+        return result.matched_documents;
+    }
+    std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status) {
+        return AddFindRequest(raw_query, [status](int, DocumentStatus document_status, int) {
+            return document_status == status;
+        });
+    }
+
+    std::vector<Document> AddFindRequest(const std::string& raw_query) {
+        return AddFindRequest(raw_query, DocumentStatus::ACTUAL);
+    }
     int GetNoResultRequests() const;
 private:
+    const SearchServer& search_server_;
+    int no_results_requests_ = 0;
+    int current_time_ = 0;
+
     struct QueryResult {
         std::vector<Document> matched_documents;
         std::string request;
     };
     std::deque<QueryResult> requests_;
     const static int min_in_day_ = 1440;
-    const SearchServer& search_server_;
-    int current_time_;
-    int no_results_requests_;
 };

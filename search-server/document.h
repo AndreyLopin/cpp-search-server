@@ -12,10 +12,10 @@ enum class DocumentStatus {
 struct Document {
     Document() = default;
 
-    Document(int id, double relevance, int rating)
-        : id(id)
-        , relevance(relevance)
-        , rating(rating) {
+    Document(int id_, double relevance_, int rating_)
+        : id(id_)
+        , relevance(relevance_)
+        , rating(rating_) {
     }
 
     int id = 0;
