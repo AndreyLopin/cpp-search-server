@@ -28,6 +28,16 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
     documents_id_.push_back(document_id);
 }
 
+std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const {
+    return FindTopDocuments(raw_query, [status](int, DocumentStatus document_status, int) {
+        return document_status == status;
+    });
+}
+
+std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query) const {
+    return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
+}
+
 int SearchServer::GetDocumentCount() const {
     return static_cast<int>(documents_.size());
 }
