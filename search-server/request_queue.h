@@ -3,6 +3,7 @@
 #include "document.h"
 #include "search_server.h"
 
+#include <cstdint>
 #include <deque>
 #include <string>
 #include <vector>
@@ -22,10 +23,10 @@ public:
 private:
     const SearchServer& search_server_;
     int no_results_requests_ = 0;
-    int current_time_ = 0;
+    uint64_t current_time_ = 0;
 
     struct QueryResult {
-        std::vector<Document> matched_documents;
+        std::vector<Document> matched_documents; //Вам не обязательно хранить все документы, достаточно просто их количества
         std::string request;
     };
     std::deque<QueryResult> requests_;
